@@ -26,7 +26,9 @@ class MyLockPattern extends CustomPainter {
 
     for (var i = 0; i < 7; ++i) {
       var pathOut = Path()
-        ..addOval(Rect.fromCircle(center: positions[i], radius: 30));
+        ..addOval(Rect.fromCircle(
+            center: positions[i].translate(size.width / 2, size.height / 2),
+            radius: 30));
 
       if (offset != null && pathOut.contains(offset!)) lastIn = i;
 
@@ -53,67 +55,76 @@ class _LevelRState extends State<LevelR> {
 
   @override
   Widget build(BuildContext context) {
-    var cx = MediaQuery.of(context).size.width / 2;
-    var cy = MediaQuery.of(context).size.height / 2;
+    var r = 130;
     var positions = List<Offset>.generate(
       7,
       (i) => Offset(
-        cx + 130 * cos(i * 2 * pi / 7 - pi / 4.69),
-        cy + 130 * sin(i * 2 * pi / 7 - pi / 4.69),
+        r * cos(i * 2 * pi / 6),
+        r * sin(i * 2 * pi / 6),
       ),
+      growable: false,
     );
-    return Center(
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          GestureDetector(
-            onPanStart: (_) => setState(() => codes.clear()),
-            onPanUpdate: (_) => setState(() => offset = _.localPosition),
-            onPanEnd: (_) => setState(
-              () => ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(codes.join('+')),
-                  duration: Duration(milliseconds: 500),
+    positions[6 /*last*/] = Offset(0, 0);
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        GestureDetector(
+          onPanDown: (_) => setState(
+            () {
+              offset = _.localPosition;
+              codes.clear();
+            },
+          ),
+          //onPanStart: (_) => setState(() => codes.clear()),
+          onPanUpdate: (_) => setState(() => offset = _.localPosition),
+          onPanEnd: (_) => setState(
+            () => ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  codes
+                      //.join('+')
+                      .fold(0, (l, r) => l |= 1 << r)
+                      .toString(),
                 ),
-              ),
-            ),
-            child: CustomPaint(
-              size: Size.fromWidth(MediaQuery.of(context).size.width),
-              painter: MyLockPattern(
-                positions: positions,
-                codes: codes,
-                offset: offset,
-                onSelect: (int code) {
-                  if (code == -1) {
-                    lastIn = false;
-                  } else if (!lastIn) {
-                    lastIn = true;
-                    if (!codes.contains(code)) {
-                      codes.add(code);
-                    } else {
-                      codes.remove(code);
-                    }
-                  }
-                },
+                duration: const Duration(milliseconds: 500),
               ),
             ),
           ),
-          for (var i = 0; i < 7; ++i)
-            Transform(
-              transform: Matrix4.identity()
-                ..translate(positions[i].dx - cx, positions[i].dy - cy),
-              child: Text(
-                '「${'➀➁➂➃➄➅Ⓢ'[i]}」',
-                style: TextStyle(
-                  color:
-                      codes.contains(i) ? Colors.white : Colors.grey.shade700,
-                  fontSize: 32,
-                  //height: 0.9,
-                ),
+          child: CustomPaint(
+            size: Size.fromWidth(MediaQuery.of(context).size.width),
+            painter: MyLockPattern(
+              positions: positions,
+              codes: codes,
+              offset: offset,
+              onSelect: (int code) {
+                if (code == -1) {
+                  lastIn = false;
+                } else if (!lastIn) {
+                  lastIn = true;
+                  if (!codes.contains(code)) {
+                    codes.add(code);
+                  } else {
+                    codes.remove(code);
+                  }
+                }
+              },
+            ),
+          ),
+        ),
+        for (var i = 0; i < 7; ++i)
+          Transform(
+            transform: Matrix4.identity()
+              ..translate(positions[i].dx, positions[i].dy),
+            child: Text(
+              '➀➁➂➃➄➅Ⓢ'[i],
+              style: TextStyle(
+                color: codes.contains(i) ? Colors.white : Colors.grey.shade700,
+                fontSize: 64,
+                height: 1.14,
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
